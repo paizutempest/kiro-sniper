@@ -1,11 +1,11 @@
 {
   "name": "fs-start-auto",
   "version": "1.2.0",
-  "description": "FS Start Auto Referral and Adoption System - Deep Ocean Edition",
-  "main": "index.js",
+  "description": "Kiro Dev Automation - Deep Ocean Edition",
+  "main": "kiro.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node kiro.js"
   },
   "author": "Paizutempest x Yaelanit",
   "license": "ISC",
