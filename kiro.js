@@ -9,21 +9,6 @@ import { table } from "table";
 
 chromium.use(stealth());
 
-
-function displayBanner() {
-    console.clear();
-    const kiroGradient = gradient(['#00FFFF', '#0080FF', '#000080']);
-    console.log(kiroGradient(`
-    ██╗  ██╗██╗██████╗  ██████╗     ██████╗ ███████╗██╗   ██╗
-    ██║ ██╔╝██║██╔══██╗██╔═══██╗    ██╔══██╗██╔════╝██║   ██║
-
-    ██╔═██╗ ██║██╔══██╗██║   ██║    ██║  ██║██╔══╝  ╚██╗ ██╔╝
-    ██║  ██╗██║██║  ██║╚██████╔╝    ██████╔╝███████╗ ╚████╔╝ 
-    ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝     ╚═════╝ ╚══════╝  ╚═══╝  
-    KIRO.DEV X AWS BUILDER - Protocol Injected
-
-const log = {
-    info: (msg) => console.log(`${chalk.cyan('ℹ')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     success: (msg) => console.log(`${chalk.green('✔')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     warn: (msg) => console.log(`${chalk.yellow('⚠')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     error: (msg) => console.log(`${chalk.red('✖')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
