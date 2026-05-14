@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
-import chalk from "chalk";
+
 import gradient from "gradient-string";
 import { input, select } from "@inquirer/prompts";
 
