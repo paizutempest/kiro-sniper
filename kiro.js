@@ -3,7 +3,7 @@ import stealth from 'puppeteer-extra-plugin-stealth';
 import chalk from "chalk";
 import gradient from "gradient-string";
 import { input, select } from "@inquirer/prompts";
-import dayjs from "dayjs";
+
 import fs from "fs";
 import { table } from "table";
 
