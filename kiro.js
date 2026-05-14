@@ -69,7 +69,7 @@ async function startEngine(count) {
         log.process(`[Akun ${i}] Inisialisasi Deep Ocean Identity`);
 
         const browser = await chromium.launch({ 
-            headless: true, 
+            headless: false, 
             args: [
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',
@@ -167,27 +167,49 @@ async function startEngine(count) {
 
             log.process("Waiting for password creation page...");
             
-            // Gunakan selector ganda (Inggris/Indo) biar anti-stuck
-            const passInput = page.locator('input[placeholder="Create password"], input[placeholder="Masukkan kata sandi"]');
-            
-            // Tunggu navigasi selesai atau selector muncul
-            await Promise.race([
-                passInput.waitFor({ state: 'visible', timeout: 45000 }),
-                page.waitForSelector('text="Create your password"', { timeout: 45000 })
-            ]).catch(() => {});
+            try {
+    // 1. Kasih jeda dikit biar blank-nya ilang (seringkali cuma masalah render)
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => log.warn("Network not idle, forcing move..."));
+    
+    // 2. Gunakan selector yang lebih spesifik (Stripe/AWS biasanya pake name atau placeholder)
+    const passSelector = 'input[name="password"], input[placeholder*="Password"], #password';
+    
+    log.info("Searching for password field with aggressive scan...");
+    await page.waitForSelector(passSelector, { state: 'visible', timeout: 30000 });
 
-            const defaultPass = "Paizuu12345!!!";
-            
-            // Masukkan password pakai selector yang lebih luas
-            log.info("Injecting password...");
-            await page.locator('input[type="password"]').nth(0).fill(defaultPass, { force: true });
-            await page.locator('input[type="password"]').nth(1).fill(defaultPass, { force: true });
-            
-            // Klik Lanjutkan / Continue
-            const finalBtn = page.locator('button:has-text("Lanjutkan"), button:has-text("Continue")');
-            await finalBtn.click({ force: true });
-            
-            log.success("Password set! Finalizing account...");
+    // 3. Branding Password Lu
+    const defaultPass = "Paizuu12345!!!";
+    log.info(`Injecting branding password: ${chalk.magenta(defaultPass)}`);
+
+    // Ambil semua field password (biasanya ada 2: Pass & Confirm Pass)
+    const passFields = await page.$$(passSelector);
+    
+    if (passFields.length >= 2) {
+        for (const field of passFields) {
+            await field.click({ force: true });
+            await field.fill(defaultPass);
+        }
+    } else {
+        // Kalau cuma nemu 1, tembak manual pake keyboard buat confirm-nya
+        await page.focus(passSelector);
+        await page.keyboard.type(defaultPass);
+        await page.keyboard.press('Tab');
+        await page.keyboard.type(defaultPass);
+    }
+
+    // 4. Submit dengan klik fisik
+    await page.keyboard.press('Enter');
+    log.success("Password injected and submitted!");
+
+} catch (err) {
+    log.error("Stuck di Password Page! Kemungkinan kena Bot Detection.");
+    // Screenshot buat lu liat blank-nya kayak gimana
+    await page.screenshot({ path: `BLANK_PASS_${dayjs().unix()}.png` });
+    
+    // TRICK TERAKHIR: Reload kalau beneran ngeblank
+    log.warn("Attempting emergency reload...");
+    await page.reload({ waitUntil: 'domcontentloaded' });
+}
 
             // 7. Success & Stripe Checkout Capture
             await page.waitForURL('https://app.kiro.dev/account/usage', { timeout: 30000 });
