@@ -21,9 +21,6 @@ function displayBanner() {
     ██║  ██╗██║██║  ██║╚██████╔╝    ██████╔╝███████╗ ╚████╔╝ 
     ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝     ╚═════╝ ╚══════╝  ╚═══╝  
     KIRO.DEV X AWS BUILDER - Protocol Injected
-    By Paizutempest | Sniper Mode Active
-    `));
-}
 
 const log = {
     info: (msg) => console.log(`${chalk.cyan('ℹ')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
