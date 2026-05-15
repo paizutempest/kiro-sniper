@@ -302,8 +302,6 @@ async function stripeCheckout(stripePage, cardData) {
     log.info("Setelah lu klik 'Subscribe', bot bakal otomatis ngedeteksi kalau sukses.");
 
     try {
-        // Bot nunggu sampe URL berubah ke arah sukses (Kiro Dashboard)
-        // Timeout dibuat lama (2 menit) biar lu ada waktu buat ngetik
         await stripePage.waitForURL(/success|confirmation|usage/, { timeout: 120000 });
         
         log.success(chalk.bgGreen.black(" HIT DETECTED! ") + " Akun lu udah jadi PRO!");
