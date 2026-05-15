@@ -1,14 +1,32 @@
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
-
+import chalk from "chalk";
 import gradient from "gradient-string";
 import { input, select } from "@inquirer/prompts";
-
+import dayjs from "dayjs";
 import fs from "fs";
 import { table } from "table";
 
 chromium.use(stealth());
 
+
+function displayBanner() {
+    console.clear();
+    const kiroGradient = gradient(['#00FFFF', '#0080FF', '#000080']);
+    console.log(kiroGradient(`
+    ██╗  ██╗██╗██████╗  ██████╗     ██████╗ ███████╗██╗   ██╗
+    ██║ ██╔╝██║██╔══██╗██╔═══██╗    ██╔══██╗██╔════╝██║   ██║
+    █████╔╝ ██║██████╔╝██║   ██║    ██║  ██║█████╗  ██║   ██║
+    ██╔═██╗ ██║██╔══██╗██║   ██║    ██║  ██║██╔══╝  ╚██╗ ██╔╝
+    ██║  ██╗██║██║  ██║╚██████╔╝    ██████╔╝███████╗ ╚████╔╝ 
+    ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝     ╚═════╝ ╚══════╝  ╚═══╝  
+    KIRO.DEV X AWS BUILDER - Protocol Injected
+    By Paizutempest | Sniper Mode Active
+    `));
+}
+
+const log = {
+    info: (msg) => console.log(`${chalk.cyan('ℹ')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     success: (msg) => console.log(`${chalk.green('✔')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     warn: (msg) => console.log(`${chalk.yellow('⚠')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
     error: (msg) => console.log(`${chalk.red('✖')} [${dayjs().format('HH:mm:ss')}] ${msg}`),
@@ -28,11 +46,31 @@ function getDeepIdentity() {
     return { ...pick, screen: screens[Math.floor(Math.random() * screens.length)] };
 }
 
+async function cleanEmailPage(emailPage) {
+    try {
+        log.info("Crushing ads on generator.email...");
+        await emailPage.addStyleTag({
+            content: `
+                iframe, .adsbygoogle, #google_ads_frame, 
+                [id*="google_ads"], [class*="ads"], 
+                .sidebar, .footer-ads, #taboola-id,
+                .content-right, .content-left, .ads-container { 
+                    display: none !important; 
+                }
+                body { overflow: auto !important; }
+            `
+        });
+    } catch (e) {
+        // Skip kalau gagal, biar gak nge-stop flow utama
+    }
+}
+
 async function getEmailFromGenerator(browserContext) {
     const page = await browserContext.newPage();
     try {
         log.process("Generating temporary email...");
         await page.goto('https://generator.email/', { waitUntil: 'networkidle' });
+        await cleanEmailPage(page);
         await page.click('button.e7m:has-text("Generate new e-mail")');
         await page.waitForTimeout(2000);
         const email = await page.innerText('#email_ch_text');
@@ -53,32 +91,38 @@ async function startEngine(count) {
         const browser = await chromium.launch({ 
             headless: false, 
             args: [
-                '--disable-blink-features=AutomationControlled',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-extensions',
-                '--mute-audio', 
-                '--disable-background-timer-throttling',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-renderer-backgrounding'
-            ]
+    '--disable-blink-features=AutomationControlled', // WAJIB (Jangan dihapus)
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    
+    // --- SETTINGAN BIAR TAMPILAN NORMAL (DARK MODE AWS) ---
+    '--use-gl=desktop',              // Paksa render desktop biar visualnya keluar
+    '--enable-accelerated-2d-canvas', // AKTIFIN ini (jangan disable) biar CSS kerender
+    
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-extensions',
+    '--mute-audio', 
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding'
+]
         });
 
         const context = await browser.newContext({ userAgent: id.ua, viewport: id.screen });
         const page = await context.newPage();
 
-        // BLOCK RESOURCES - AGGRESSIVE MODE
-        await page.route('**/*', (route) => {
-            const type = route.request().resourceType();
-            if (['image', 'media', 'font', 'stylesheet'].includes(type)) route.abort();
-            else route.continue();
-        });
 
+        await page.route('**/*', (route) => {
+    const type = route.request().resourceType();
+
+    if (['image', 'media'].includes(type)) { 
+        route.abort(); 
+    } else {
+        route.continue();
+    }
+});
         try {
             // 1. Ambil Email
             const genData = await getEmailFromGenerator(context);
@@ -131,14 +175,18 @@ async function startEngine(count) {
             let otp = null;
             log.process("Sniffing OTP from generator.email...");
             for (let retry = 0; retry < 12; retry++) {
-                await emailPage.reload({ waitUntil: 'networkidle' });
-                const otpElement = await emailPage.$('div.code');
-                if (otpElement) {
-                    otp = (await otpElement.innerText()).trim();
-                    break;
-                }
-                await page.waitForTimeout(5000);
-            }
+    await emailPage.reload({ waitUntil: 'networkidle' });
+    
+    // --- BERSIHIN LAGI SETIAP RELOAD ---
+    await cleanEmailPage(emailPage); 
+    
+    const otpElement = await emailPage.$('div.code');
+    if (otpElement) {
+        otp = (await otpElement.innerText()).trim();
+        break;
+    }
+    await page.waitForTimeout(5000);
+}
 
             if (!otp) throw new Error("OTP timeout.");
             log.success(`OTP Found: ${chalk.magenta(otp)}`);
@@ -149,48 +197,57 @@ async function startEngine(count) {
 
             log.process("Waiting for password creation page...");
             
-            try {
-    // 1. Kasih jeda dikit biar blank-nya ilang (seringkali cuma masalah render)
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => log.warn("Network not idle, forcing move..."));
-    
-    // 2. Gunakan selector yang lebih spesifik (Stripe/AWS biasanya pake name atau placeholder)
-    const passSelector = 'input[name="password"], input[placeholder*="Password"], #password';
-    
-    log.info("Searching for password field with aggressive scan...");
-    await page.waitForSelector(passSelector, { state: 'visible', timeout: 30000 });
+        try {
+    // 1. Tunggu selector placeholder lu (Biar tampilan masih hancur, dia tetep bisa deteksi)
+    const passInput = page.locator('input[type="password"][placeholder="Enter password"]');
+    const confirmInput = page.locator('input[type="password"][placeholder="Re-enter password"]');
+    const continueBtn = page.locator('button[type="submit"]:has-text("Continue")');
 
-    // 3. Branding Password Lu
+    log.info("🎯 Password Page Detected. Switching to Normal View Mode...");
+
+    // 2. MATIKAN BLOCKIR (UNROUTE) & PAKSA RENDER NORMAL
+    await page.unroute('**/*'); // Buka semua gerbang CSS/Font
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.setViewportSize({ width: 1280, height: 721 }); 
+    
+    // RELOAD: Biar tampilan aslinya muncul (Normal View)
+    await page.reload({ waitUntil: 'networkidle' }); 
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // 3. INJECT PASSWORD (LOGIKA HUMAN-TYPE)
+    await passInput.waitFor({ state: 'visible', timeout: 20000 });
+    
     const defaultPass = "Paizuu12345!!!";
-    log.info(`Injecting branding password: ${chalk.magenta(defaultPass)}`);
+    log.info(`Injecting branding pass: ${chalk.magenta(defaultPass)}`);
 
-    // Ambil semua field password (biasanya ada 2: Pass & Confirm Pass)
-    const passFields = await page.$$(passSelector);
+    // Klik & Bersihin Kolom 1
+    await passInput.click({ delay: 500 });
+    await page.keyboard.down('Control');
+    await page.keyboard.press('A');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Backspace');
     
-    if (passFields.length >= 2) {
-        for (const field of passFields) {
-            await field.click({ force: true });
-            await field.fill(defaultPass);
-        }
-    } else {
-        // Kalau cuma nemu 1, tembak manual pake keyboard buat confirm-nya
-        await page.focus(passSelector);
-        await page.keyboard.type(defaultPass);
-        await page.keyboard.press('Tab');
-        await page.keyboard.type(defaultPass);
-    }
+    // Ketik Kolom 1
+    await page.keyboard.type(defaultPass, { delay: 130 });
+    await page.waitForTimeout(500);
 
-    // 4. Submit dengan klik fisik
-    await page.keyboard.press('Enter');
-    log.success("Password injected and submitted!");
+    // Pindah ke Kolom 2 pake Tab
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(500);
+    
+    // Ketik Kolom 2 (Confirm)
+    await page.keyboard.type(defaultPass, { delay: 130 });
+    await page.waitForTimeout(1000); // Tunggu validasi AWS kelar
+
+    // 4. SUBMIT PAKE SELECTOR TOMBOL LU
+    log.process("Submitting with primary button...");
+    await continueBtn.click({ force: true });
+    
+    log.success("Password submitted! Akun Kiro otw Pro.");
 
 } catch (err) {
-    log.error("Stuck di Password Page! Kemungkinan kena Bot Detection.");
-    // Screenshot buat lu liat blank-nya kayak gimana
-    await page.screenshot({ path: `BLANK_PASS_${dayjs().unix()}.png` });
-    
-    // TRICK TERAKHIR: Reload kalau beneran ngeblank
-    log.warn("Attempting emergency reload...");
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    log.error("Stuck di Password Page: " + err.message);
+    await page.screenshot({ path: `ERROR_PASS_NORMAL_${dayjs().unix()}.png` });
 }
 
             // 7. Success & Stripe Checkout Capture
